@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<java version="1.6.0_20" class="java.beans.XMLDecoder"> 
+ <object class="orion.orionuserview.DatabaseDef"> 
+  <void property="URL"> 
+   <string>jdbc:firebirdsql:172.16.1.1/3050:zismg?lc_ctype=WIN1251</string> 
+  </void> 
+  <void property="info"> 
+   <object class="java.util.Properties"> 
+    <void method="put"> 
+     <string>user</string> 
+     <string>SYSDBA</string> 
+    </void> 
+    <void method="put"> 
+     <string>password</string> 
+     <string>ntktajy</string> 
+    </void> 
+   </object> 
+  </void> 
+  <void property="shownOnlyAsForegnKeyAttrPatterns"> 
+   <void method="add"> 
+    <string>CODE</string> 
+   </void> 
+  </void> 
+  <void property="uninterestedAttrPatterns"> 
+   <void method="add"> 
+    <string>HASFILLED_NAME</string> 
+   </void> 
+   <void method="add"> 
+    <string>HASFILLED_ROLE</string> 
+   </void> 
+  </void> 
+ </object> 
+</java> 
