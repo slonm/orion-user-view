@@ -12,30 +12,18 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.AbstractCellEditor;
-import javax.swing.ButtonGroup;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-import javax.swing.JTable;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableCellRenderer;
-import org.jdesktop.application.Action;
+import javax.swing.table.*;
 import org.jdesktop.application.Application;
 import org.jdesktop.application.ResourceMap;
-import orion.orionuserview.Relation;
-import orion.orionuserview.RelationSourceType;
-import orion.orionuserview.RelationType;
+import orion.orionuserview.*;
 
 /**
  *
@@ -47,7 +35,7 @@ public class RelationsSelector extends javax.swing.JPanel {
     private static final ResourceMap resourceMap = Application.getInstance().getContext().getResourceMap(SimpleConnectionSelector.class);
     private DefaultTableModel model = new javax.swing.table.DefaultTableModel(
             null,
-            new String[]{"Таблица", "U      E      P      G       I       R      H"}) {
+            new String[]{"Таблица", "E      D       R      H"}) {
 
         Class[] types = new Class[]{Relation.class, Relation.class};
 
@@ -58,11 +46,14 @@ public class RelationsSelector extends javax.swing.JPanel {
     };
 
     /** Creates new form RelationsSelector */
-    public RelationsSelector(Globals globals) {
+    public RelationsSelector(final Globals globals) {
         this.globals = globals;
         initComponents();
+        final RelationCellRenderer renderer=new RelationCellRenderer(globals);
         relationsTable.setDefaultEditor(Relation.class, new RelationCellEditor(globals));
-        relationsTable.setDefaultRenderer(Relation.class, new RelationCellRenderer(globals));
+        relationsTable.setDefaultRenderer(Relation.class, renderer);
+        relationsTable.getColumnModel().getColumn(1).setMinWidth(160);
+        relationsTable.getColumnModel().getColumn(1).setMaxWidth(160);
     }
 
     /** This method is called from within the constructor to
@@ -76,12 +67,6 @@ public class RelationsSelector extends javax.swing.JPanel {
 
         jScrollPane1 = new javax.swing.JScrollPane();
         relationsTable = new javax.swing.JTable();
-        jToolBar1 = new javax.swing.JToolBar();
-        jButton1 = new javax.swing.JButton();
-        jSeparator1 = new javax.swing.JToolBar.Separator();
-        jButton2 = new javax.swing.JButton();
-        jSeparator2 = new javax.swing.JToolBar.Separator();
-        jButton3 = new javax.swing.JButton();
 
         addComponentListener(new java.awt.event.ComponentAdapter() {
             public void componentShown(java.awt.event.ComponentEvent evt) {
@@ -97,67 +82,23 @@ public class RelationsSelector extends javax.swing.JPanel {
         relationsTable.getTableHeader().setReorderingAllowed(false);
         jScrollPane1.setViewportView(relationsTable);
 
-        jToolBar1.setFloatable(false);
-        jToolBar1.setName("jToolBar1"); // NOI18N
-
-        javax.swing.ActionMap actionMap = org.jdesktop.application.Application.getInstance().getContext().getActionMap(RelationsSelector.class, this);
-        jButton1.setAction(actionMap.get("forecastOne")); // NOI18N
-        jButton1.setText("Предположение первое");
-        jButton1.setActionCommand("Предположение первое");
-        jButton1.setFocusable(false);
-        jButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton1.setName("jButton1"); // NOI18N
-        jButton1.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton1);
-
-        jSeparator1.setName("jSeparator1"); // NOI18N
-        jToolBar1.add(jSeparator1);
-
-        jButton2.setAction(actionMap.get("forecast2")); // NOI18N
-        jButton2.setFocusable(false);
-        jButton2.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton2.setName("jButton2"); // NOI18N
-        jButton2.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton2);
-
-        jSeparator2.setName("jSeparator2"); // NOI18N
-        jToolBar1.add(jSeparator2);
-
-        jButton3.setAction(actionMap.get("forecastThree")); // NOI18N
-        jButton3.setFocusable(false);
-        jButton3.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton3.setName("jButton3"); // NOI18N
-        jButton3.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton3);
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jToolBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 581, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addComponent(jToolBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 291, javax.swing.GroupLayout.PREFERRED_SIZE))
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 328, Short.MAX_VALUE)
         );
     }// </editor-fold>//GEN-END:initComponents
 
     private void formComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentShown
-        globals.addHint("Сделайте первое предположение");
         fillTable();
     }//GEN-LAST:event_formComponentShown
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JToolBar.Separator jSeparator1;
-    private javax.swing.JToolBar.Separator jSeparator2;
-    private javax.swing.JToolBar jToolBar1;
     private javax.swing.JTable relationsTable;
     // End of variables declaration//GEN-END:variables
 
@@ -235,14 +176,11 @@ public class RelationsSelector extends javax.swing.JPanel {
 
     static class RelationCellRenderer extends JPanel implements TableCellRenderer {
 
-        public static final int buttonsCount = 7;
+        public static final int buttonsCount = 4;
         public final JRadioButton[] radioButtons = new JRadioButton[buttonsCount];
         public static final RelationType[] relationTypes = new RelationType[]{
-            RelationType.UNKNOWN,
             RelationType.ENTITY,
-            RelationType.PERIODIC,
-            RelationType.GROUP,
-            RelationType.INTERSECTION,
+            RelationType.DEPENDENT,
             RelationType.REFERENCE_BOOK,
             RelationType.HIDDEN};
         private final ButtonGroup group = new ButtonGroup();
@@ -329,42 +267,6 @@ public class RelationsSelector extends javax.swing.JPanel {
                     return this;
             }
             return null;
-        }
-    }
-
-    @Action
-    public void forecastOne() {
-        try {
-            globals.getDatabaseDef().forecastRelationTypeOne();
-            fillTable();
-            globals.addInfo("Первое предположение сделано");
-            globals.addHint("Скорректируйте отметки о ненужных таблицах и сделайте второе предположение");
-        } catch (SQLException ex) {
-            globals.addError("Ошибка связи с базой данных");
-        }
-    }
-
-    @Action
-    public void forecast2() {
-        try {
-            globals.getDatabaseDef().forecastRelationTypeTwo();
-            fillTable();
-            globals.addInfo("Второе предположение сделано");
-            globals.addHint("Скорректируйте отметки сущностей и справочников, затем сделайте третье предположение");
-        } catch (SQLException ex) {
-            globals.addError("Ошибка связи с базой данных");
-        }
-    }
-
-    @Action
-    public void forecastThree() {
-        try {
-            globals.getDatabaseDef().forecastRelationTypeThree();
-            fillTable();
-            globals.addInfo("Третье предположение сделано");
-            globals.addHint("Скорректируйте отметки групп, периодических атрибутов и таблиц пересечений, затем перейдите на следующую страницу");
-        } catch (SQLException ex) {
-            globals.addError("Ошибка связи с базой данных");
         }
     }
 }

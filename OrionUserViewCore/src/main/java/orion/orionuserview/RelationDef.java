@@ -19,6 +19,8 @@ public interface RelationDef extends AttributeDef, List<AttributeDef> {
 
     RelationSourceType getRelationSourceType();
 
+    RelationType getRelationType();
+
     boolean isInitiated();
 
     void init() throws SQLException;

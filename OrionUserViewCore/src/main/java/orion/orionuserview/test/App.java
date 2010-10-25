@@ -19,7 +19,7 @@ public class App {
         dd.getHiddenAttrPatterns().add("CODE");
         dd.getHiddenAttrPatterns().add("HASFILLED_NAME");
         dd.getHiddenAttrPatterns().add("HASFILLED_ROLE");
-        dd.getRootRelationDefs();
+        dd.getEntityDefs();
         XMLEncoder encoder = new XMLEncoder(new BufferedOutputStream(new FileOutputStream("Beanarchive.xml")));
         encoder.writeObject(dd);
         encoder.close();

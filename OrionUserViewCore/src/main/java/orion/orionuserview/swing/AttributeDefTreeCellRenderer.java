@@ -52,6 +52,9 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
                     if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY) {
                         setIcon(icons.get("ManyTables"));
                     }
+                    if(leaf){
+                        setIcon(iconByDataType(getNuclearAttributeDefLeaf(rd).getDataType()));
+                    }
                 }
             } else if (ad instanceof NuclearAttributeDef) {
                 NuclearAttributeDef sad = (NuclearAttributeDef) ad;
@@ -64,6 +67,16 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
             setText(UIUtils.attributeDefPresentableNameForAdmin(globals, ad));
         }
         return this;
+    }
+
+    private NuclearAttributeDef getNuclearAttributeDefLeaf(RelationDef rd) {
+        AttributeDef childAd=rd.get(0);
+        if(childAd instanceof NuclearAttributeDef){
+            return (NuclearAttributeDef) childAd;
+        }else{
+            return getNuclearAttributeDefLeaf((RelationDef) childAd);
+        }
+
     }
 
     private Icon iconByDataType(Integer dataType) {

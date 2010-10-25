@@ -25,6 +25,7 @@ public class AttributeDefTreeNode implements TreeNode {
     private final RelationDef relationDef;
     private final AttributeDefTreeNode parent;
     private List<AttributeDefTreeNode> children;
+    private boolean closureOneLeaf = true;
 
     public AttributeDef getAttributeDef() {
         init();
@@ -76,12 +77,23 @@ public class AttributeDefTreeNode implements TreeNode {
 
     @Override
     public boolean getAllowsChildren() {
-        return relationDef != null;
+        return !isLeaf();
     }
 
     @Override
     public boolean isLeaf() {
-        return relationDef == null;
+        if (closureOneLeaf) {
+            init();
+            if (children == null) {
+                return true;
+            } else if (children.size() == 1) {
+                return children.get(0).isLeaf();
+            } else {
+                return false;
+            }
+        } else {
+            return relationDef == null;
+        }
     }
 
     @Override
@@ -137,5 +149,4 @@ public class AttributeDefTreeNode implements TreeNode {
         int hash = 5;
         return hash;
     }
-
 }

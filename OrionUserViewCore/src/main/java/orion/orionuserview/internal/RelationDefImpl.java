@@ -52,29 +52,25 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
             //------------Добавляем скалярные поля-------------
             List<Column> columns = metadataCache.getColumns(relation);
             for (Column column : columns) {
-                NuclearAttributeDefImpl ad = new NuclearAttributeDefImpl(column.name,
-                        this, column.type, column.nullable);
-                ad.setRemarks(column.remarks);
-                add(ad);
-            }
-            //------------удалим поля из hiddenAttrPatterns------------------
-            //Удаляем их именно после того как нужные поля были заменены внешними ключами
-            Iterator<AttributeDef> it = iterator();
-            while (it.hasNext()) {
-                AttributeDef ad = it.next();
-                if (ad instanceof NuclearAttributeDefImpl) {
-                    for (String pattern : getRoot().getDatabaseDef().getHiddenAttrPatterns()) {
-                        if (ad.getName().matches(String.format(pattern, getName()))) {
-                            it.remove();
-                            break;
-                        }
+                boolean hidden = false;
+                //------------удалим поля из hiddenAttrPatterns------------------
+                for (String pattern : getRoot().getDatabaseDef().getHiddenAttrPatterns()) {
+                    if (column.name.matches(String.format(pattern, getName()))) {
+                        hidden = true;
+                        break;
                     }
+                }
+                if (!hidden) {
+                    NuclearAttributeDefImpl ad = new NuclearAttributeDefImpl(column.name,
+                            this, column.type, column.nullable);
+                    ad.setRemarks(column.remarks);
+                    add(ad);
                 }
             }
             //------------Заменим поля связи на атрибут - внешний ключ
             replaceNuclearAttributeByForeignKey();
             //------------Добавим группы и периодические атрибуты
-            addGroupsAndPeriodic();
+            addDependent();
             initiated = true;
         }
     }
@@ -135,30 +131,38 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
         }
     }
 
-    private void addGroupsAndPeriodic() throws SQLException {
+    private void addDependent() throws SQLException {
         //---------------Добавляем внешние ключи OneTo(One|Many)----------------------
         MetadataCache metadataCache = rootEntityDefImpl.getDatabaseDefImpl().getMetadataCache();
         if (relation.getRelationType() != RelationType.REFERENCE_BOOK
                 && !getRoot().getAdditionalReferenceBooks().contains(relation)) {
             //Закешируем ResultSet в множество для удобства работы
             Set<CrossReference> crossReferences = metadataCache.getCrossReferences(relation, null);
+            //Множество уде добавленных зависимых таблиц
+            Set<Relation> addedRelations = new HashSet<Relation>();
             //Создадим и сформируем объекты ForeignKeyDefImpl
             for (CrossReference crRef : crossReferences) {
-                //исключим циклические ссылки
-                if (crRef.fkRelation.getRelationType() != RelationType.HIDDEN
-                        && !haveForeignKeyInParents(this, crRef)) {
-                    ForeignKeyDefImpl fkd = new ForeignKeyDefImpl(crRef.fkRelation, this, getRootEntityDefImpl(),
-                            ForeignKeyType.ONE_TO_MANY, crRef);
-                    //Проверим - может это OneToOne
-                    fkd.setUniqueIndexes(metadataCache.getUniqueIndexes(fkd.getRelation()));
-                    for (UniqueIndex ui : fkd.getUniqueIndexes()) {
-                        if (ui.columns.equals(new HashSet(fkd.getPkOnFk().values()))) {
-                            fkd.setForegnKeyType(ForeignKeyType.ONE_TO_ONE_FK);
-                            break;
+                //Исключим повторы зависимых таблиц. Они могут быть если разные
+                //поля зависимой таблицы ссылаются на родительскую таблицу
+                //FIXME добавляется ссылка на первый попавшийся атрибут
+                if (!addedRelations.contains(crRef.fkRelation)) {
+                    //исключим циклические ссылки
+                    if (crRef.fkRelation.getRelationType() != RelationType.HIDDEN
+                            && !haveForeignKeyInParents(this, crRef)) {
+                        ForeignKeyDefImpl fkd = new ForeignKeyDefImpl(crRef.fkRelation, this, getRootEntityDefImpl(),
+                                ForeignKeyType.ONE_TO_MANY, crRef);
+                        //Проверим - может это OneToOne
+                        fkd.setUniqueIndexes(metadataCache.getUniqueIndexes(fkd.getRelation()));
+                        for (UniqueIndex ui : fkd.getUniqueIndexes()) {
+                            if (ui.columns.equals(new HashSet(fkd.getPkOnFk().values()))) {
+                                fkd.setForegnKeyType(ForeignKeyType.ONE_TO_ONE_FK);
+                                break;
+                            }
                         }
+                        //Добавляем в конец списка полей
+                        add(fkd);
                     }
-                    //Добавляем в конец списка полей
-                    add(fkd);
+                    addedRelations.add(crRef.fkRelation);
                 }
             }
         }
@@ -222,16 +226,6 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
         return relation.getSchema();
     }
 
-    public AttributeDef get(String name) {
-        Defense.notBlank(name, "name");
-        for (AttributeDef ad : attributes) {
-            if (name.equals(ad.getName())) {
-                return ad;
-            }
-        }
-        return null;
-    }
-
     @Override
     public int size() {
         return attributes.size();
@@ -278,16 +272,6 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
     @SuppressWarnings("element-type-mismatch")
     public boolean contains(Object o) {
         return attributes.contains(o);
-    }
-
-    public boolean containsName(String name) {
-        Defense.notBlank(name, "name");
-        for (AttributeDef ad : attributes) {
-            if (name.equals(ad.getName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -385,13 +369,8 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
         }
     }
 
-    private static boolean nullEquals(Object o1, Object o2) {
-        if (o1 == null && o2 == null) {
-            return true;
-        } else if (o1 != null) {
-            return o1.equals(o2);
-        } else {
-            return o2.equals(o1);
-        }
+    @Override
+    public RelationType getRelationType() {
+        return relation.getRelationType();
     }
 }
