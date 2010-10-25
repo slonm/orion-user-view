@@ -28,24 +28,5 @@ public interface DatabaseDef {
 
     boolean isConnected();
 
-    Set<EntityDef> getRootRelationDefs() throws SQLException;
-
-    /**
-     * Прогнозирование типов таблиц. Предполагает
-     * скрытые (ненужные) таблицы
-     */
-    void forecastRelationTypeOne() throws SQLException;
-
-    /**
-     * Прогнозирование типов таблиц. Предполагает
-     * сущности и справочники
-     */
-    void forecastRelationTypeTwo() throws SQLException;
-    /**
-     * Прогнозирование типов таблиц. Предполагает
-     * группы, атрибуты и таблицы пересечений
-     * @see forecastRelationTypeOne()
-     * @throws SQLException
-     */
-    void forecastRelationTypeThree() throws SQLException;
+    Set<EntityDef> getEntityDefs() throws SQLException;
 }

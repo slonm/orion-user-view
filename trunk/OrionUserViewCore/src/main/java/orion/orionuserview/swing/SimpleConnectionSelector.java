@@ -32,8 +32,8 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
         initComponents();
         driverChanged();
         //----Begin Debug Block----
-//        _URLControl.setText("jdbc:firebirdsql:172.16.1.1/3050:zismg?lc_ctype=WIN1251");
-        _URLControl.setText("jdbc:firebirdsql:172.16.1.4/3050:/var/lib/firebird/2.1/data/ouv.fdb");
+        _URLControl.setText("jdbc:firebirdsql:172.16.1.1/3050:zismg?lc_ctype=WIN1251");
+//        _URLControl.setText("jdbc:firebirdsql:172.16.1.4/3050:/var/lib/firebird/2.1/data/ouv.fdb");
         userControl.setText("SYSDBA");
         passwordControl.setText("ntktajy");
         //----End Debug Block----

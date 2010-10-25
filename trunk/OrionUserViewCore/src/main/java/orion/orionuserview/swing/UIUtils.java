@@ -31,7 +31,7 @@ public class UIUtils {
         }
         String ret = globals.getParametr(String.class, "AttributePresentationTemplateForAdmin").toLowerCase();
         ret = ret.replace("{name}", retName);
-        ret = ret.replace("{remarks}", relation.getRemarks());
+        ret = ret.replace("{remarks}", getRemarks(relation.getRemarks()));
         return ret;
     }
 
@@ -45,36 +45,45 @@ public class UIUtils {
 
             retName = (rd.getCatalog() != null ? rd.getCatalog() + "." : "")
                     + (rd.getSchema() != null ? rd.getSchema() + "." : "") + retName;
-            if (rd instanceof ForeignKeyDef) {
-                String pkAttrs = "", fkAttrs = "";
-                ForeignKeyDef fkd = (ForeignKeyDef) rd;
-                for (String pkAttr : fkd.getPkOnFk().keySet()) {
-                    pkAttrs = (pkAttrs.length() != 0 ? pkAttrs + ", " : "") + pkAttr;
-                    fkAttrs = (fkAttrs.length() != 0 ? fkAttrs + ", " : "") + fkd.getPkOnFk().get(pkAttr);
-                }
-                String leftAttrs = fkAttrs;
-                String rightAttrs = pkAttrs;
-                String arrow=" --> ";
-                boolean nameAtLeft = false;
-                if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY||
-                    fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_FK) {
-                    nameAtLeft = true;
-                }else if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_PK) {
-                    nameAtLeft = true;
-                    leftAttrs = pkAttrs;
-                    rightAttrs = fkAttrs;
-                    arrow = " <-- ";
-                }
-
-                retName = (nameAtLeft ? retName + " " : "") + "{" + leftAttrs + "}" + arrow + (!nameAtLeft ? retName + " " : "") + "{" + rightAttrs + "}";
-            }
+//            if (rd instanceof ForeignKeyDef) {
+//                String pkAttrs = "", fkAttrs = "";
+//                ForeignKeyDef fkd = (ForeignKeyDef) rd;
+//                for (String pkAttr : fkd.getPkOnFk().keySet()) {
+//                    pkAttrs = (pkAttrs.length() != 0 ? pkAttrs + ", " : "") + pkAttr;
+//                    fkAttrs = (fkAttrs.length() != 0 ? fkAttrs + ", " : "") + fkd.getPkOnFk().get(pkAttr);
+//                }
+//                String leftAttrs = fkAttrs;
+//                String rightAttrs = pkAttrs;
+//                String arrow=" --> ";
+//                boolean nameAtLeft = false;
+//                if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY||
+//                    fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_FK) {
+//                    nameAtLeft = true;
+//                }else if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_PK) {
+//                    nameAtLeft = true;
+//                    leftAttrs = pkAttrs;
+//                    rightAttrs = fkAttrs;
+//                    arrow = " <-- ";
+//                }
+//
+//                retName = (nameAtLeft ? retName + " " : "") + "{" + leftAttrs + "}" + arrow + (!nameAtLeft ? retName + " " : "") + "{" + rightAttrs + "}";
+//            }
         }
         if (attributeDef.getRemarks() == null) {
             return retName;
         }
         String ret = globals.getParametr(String.class, "AttributePresentationTemplateForAdmin").toLowerCase();
         ret = ret.replace("{name}", retName);
-        ret = ret.replace("{remarks}", attributeDef.getRemarks());
+        ret = ret.replace("{remarks}", getRemarks(attributeDef.getRemarks()));
         return ret;
+    }
+
+    private static String getRemarks(String remarks){
+        String[] s=remarks.split("\\|");
+        if(s.length>=3){
+            return s[2];
+        }else{
+            return remarks;
+        }
     }
 }

@@ -67,13 +67,12 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
      * @throws SQLException
      */
     @Override
-    public Set<EntityDef> getRootRelationDefs() throws SQLException {
+    public Set<EntityDef> getEntityDefs() throws SQLException {
         connect();
         //Переформируем множество перед возвратом
         Map<Relation, EntityDefImpl> entityDefs = new HashMap<Relation, EntityDefImpl>();
         for (RelationImpl r : metadataCache.getRelations()) {
-            if (r.relationType == RelationType.ENTITY
-                    || r.relationType == RelationType.GROUP) {
+            if (r.relationType == RelationType.ENTITY) {
                 if (!entityDefs.containsKey(r)) {
                     EntityDefImpl ed = new EntityDefImpl(this, r);
                     entityDefs.put(r, ed);
@@ -112,6 +111,7 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
         if (connection == null) {
             connection = DriverManager.getConnection(url, info);
             metadataCache.init();
+            forecastRelationType();
         }
         return connection;
     }
@@ -177,30 +177,14 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
         this.url = url;
     }
 
-//    public void setEntityDefs(Map<Relation, EntityDefImpl> entityDefs) {
-//        this.entityDefs = entityDefs;
-//    }
-
-    @Override
-    public void forecastRelationTypeOne() throws SQLException {
+    private void forecastRelationType() throws SQLException {
         for (Relation relation : getRelations()) {
-            if (relation.getRelationType() == RelationType.UNKNOWN) {
-                Set<CrossReference> crPk = metadataCache.getCrossReferences(relation, null);
-                Set<CrossReference> crFk = metadataCache.getCrossReferences(null, relation);
-                //Если в таблице и на таблицу нет ссылок, то будем считать ее ненужной
-                if (crPk.size() == 0 && crFk.size() == 0) {
-                    relation.setRelationType(RelationType.HIDDEN);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void forecastRelationTypeTwo() throws SQLException {
-        for (Relation relation : getRelations()) {
-            if (relation.getRelationType() == RelationType.UNKNOWN) {
-                Set<CrossReference> crPk = metadataCache.getCrossReferences(relation, null);
-                Set<CrossReference> crFk = metadataCache.getCrossReferences(null, relation);
+            Set<CrossReference> crPk = metadataCache.getCrossReferences(relation, null);
+            Set<CrossReference> crFk = metadataCache.getCrossReferences(null, relation);
+            //Если в таблице и на таблицу нет ссылок, то будем считать ее ненужной
+            if (crPk.size() == 0 && crFk.size() == 0) {
+                relation.setRelationType(RelationType.HIDDEN);
+            } else {
                 //Эта таблица каскадно удаляет записи других таблиц
                 boolean existsCascadeDeleteForegnKeyInRelation = false;
                 for (CrossReference cr : crPk) {
@@ -219,33 +203,20 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
                         break;
                     }
                 }
-                boolean existsForeinKeyInPrimaryKey = false;
-                Set<UniqueIndex> uniques = metadataCache.getUniqueIndexes(relation);
-                for (UniqueIndex ui : uniques) {
-                    if (ui.isPrimaryKey) {
-                        for (CrossReference cr : crFk) {
-                            if (ui.columns.containsAll(cr.pkOnFk.values())) {
-                                existsForeinKeyInPrimaryKey = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                //Если в первичный ключ не входят ссылки и никакая другая таблица не 
+                //Если в никакая другая таблица не
                 //удаляет каскадно записи этой таблицы, то это или справочник или сущность
-                if (!existsForeinKeyInPrimaryKey && !existsCascadeDeleteForegnKeyInOtherRelation) {
+                if (!existsCascadeDeleteForegnKeyInOtherRelation) {
                     //Если эта таблица каскадно удаляет записи других таблиц, то это сущность
                     if (existsCascadeDeleteForegnKeyInRelation) {
                         relation.setRelationType(RelationType.ENTITY);
                     } else {
                         relation.setRelationType(RelationType.REFERENCE_BOOK);
                     }
+                } else {
+                    relation.setRelationType(RelationType.DEPENDENT);
                 }
             }
         }
     }
 
-    @Override
-    public void forecastRelationTypeThree() throws SQLException {
-    }
 }

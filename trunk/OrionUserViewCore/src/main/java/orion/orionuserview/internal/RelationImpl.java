@@ -16,7 +16,7 @@ public class RelationImpl implements Relation {
     public String name;
     public String remarks;
     public RelationSourceType sourceType = RelationSourceType.TABLE;
-    public RelationType relationType = RelationType.UNKNOWN;
+    public RelationType relationType;
 
     public RelationImpl() {
     }
