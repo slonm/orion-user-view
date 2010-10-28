@@ -22,7 +22,7 @@ public class UniqueIndex {
 
     @Override
     public String toString() {
-        StringBuffer sb=new StringBuffer();
+        StringBuilder sb=new StringBuilder();
         sb.append(relation);
         sb.append(" (");
         boolean firstPass=true;

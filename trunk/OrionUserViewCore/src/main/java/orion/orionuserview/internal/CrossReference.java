@@ -1,8 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package orion.orionuserview.internal;
 
 import java.util.HashMap;
@@ -24,7 +19,7 @@ public class CrossReference{
     
     @Override
     public String toString() {
-        StringBuffer sb=new StringBuffer();
+        StringBuilder sb=new StringBuilder();
         sb.append(fkRelation);
         sb.append(" (");
         boolean firstPass=true;

@@ -24,4 +24,6 @@ public interface RelationDef extends AttributeDef, List<AttributeDef> {
     boolean isInitiated();
 
     void init() throws SQLException;
+
+    String getAlias();
 }

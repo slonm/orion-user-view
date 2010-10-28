@@ -6,6 +6,7 @@ import java.util.*;
 import orion.orionuserview.DatabaseDef;
 import orion.orionuserview.EntityDef;
 import orion.orionuserview.Relation;
+import orion.orionuserview.RelationDef;
 import orion.orionuserview.RelationType;
 
 /**
@@ -17,8 +18,8 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
 
     private String url;
     private Properties info;
-    transient private Connection connection;
-    transient private MetadataCache metadataCache = new MetadataCache(this);
+    private Connection connection;
+    private MetadataCache metadataCache;
 //    private Map<Relation, EntityDefImpl> entityDefs = new HashMap<Relation, EntityDefImpl>();
     private boolean storeUser = true;
     private boolean storePassword = false;
@@ -71,7 +72,7 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
         connect();
         //Переформируем множество перед возвратом
         Map<Relation, EntityDefImpl> entityDefs = new HashMap<Relation, EntityDefImpl>();
-        for (RelationImpl r : metadataCache.getRelations()) {
+        for (RelationImpl r : getMetadataCache().getRelations()) {
             if (r.relationType == RelationType.ENTITY) {
                 if (!entityDefs.containsKey(r)) {
                     EntityDefImpl ed = new EntityDefImpl(this, r);
@@ -110,6 +111,7 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
         validate();
         if (connection == null) {
             connection = DriverManager.getConnection(url, info);
+            metadataCache = new MetadataCache(connection.getMetaData());
             metadataCache.init();
             forecastRelationType();
         }
@@ -144,7 +146,7 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
      */
     @Override
     public Set<? extends Relation> getRelations() throws SQLException {
-        return metadataCache.getRelations();
+        return getMetadataCache().getRelations();
     }
 
     private void validate() {
@@ -153,7 +155,8 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
         }
     }
 
-    MetadataCache getMetadataCache() {
+    public MetadataCache getMetadataCache() throws SQLException {
+        connect();
         return metadataCache;
     }
 
@@ -179,10 +182,10 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
 
     private void forecastRelationType() throws SQLException {
         for (Relation relation : getRelations()) {
-            Set<CrossReference> crPk = metadataCache.getCrossReferences(relation, null);
-            Set<CrossReference> crFk = metadataCache.getCrossReferences(null, relation);
+            Set<CrossReference> crPk = metadataCache.getPkCrossReferences(relation);
+            Set<CrossReference> crFk = metadataCache.getFkCrossReferences(relation);
             //Если в таблице и на таблицу нет ссылок, то будем считать ее ненужной
-            if (crPk.size() == 0 && crFk.size() == 0) {
+            if (crPk.isEmpty() && crFk.isEmpty()) {
                 relation.setRelationType(RelationType.HIDDEN);
             } else {
                 //Эта таблица каскадно удаляет записи других таблиц
@@ -218,5 +221,50 @@ public class DatabaseDefImpl implements Serializable, DatabaseDef {
             }
         }
     }
+    private Map<String, Integer> aliases = new HashMap<String, Integer>();
 
+    @Override
+    public synchronized String newAlias(RelationDef relation) {
+        String aliasBase = aliasBase(relation);
+        if (aliases.containsKey(aliasBase)) {
+            Integer num = aliases.get(aliasBase);
+            aliases.put(aliasBase, num + 1);
+            return aliasBase + num;
+        } else {
+            aliases.put(aliasBase, 1);
+            return aliasBase + 1;
+        }
+    }
+
+    protected String aliasBase(RelationDef relation) {
+        StringBuilder alias = new StringBuilder();
+        //Если слова имени разделены подчеркиваниями
+        if (relation.getName().lastIndexOf("_") >= 0) {
+            String[] nameParts = relation.getName().split("_");
+            for (String s : nameParts) {
+                if (s.length() > 0) {
+                    alias.append(s.charAt(0));
+                }
+            }
+            //Если CamelCase
+        } else if (relation.getName().toLowerCase().equals(relation.getName())
+                && relation.getName().toUpperCase().equals(relation.getName())) {
+            StringBuilder buf = new StringBuilder(relation.getName());
+            for (int i = 1; i < buf.length() - 1; i++) {
+                if (Character.isLowerCase(buf.charAt(i - 1))
+                        && Character.isUpperCase(buf.charAt(i))
+                        && Character.isLowerCase(buf.charAt(i + 1))) {
+                    alias.append(buf.charAt(i++));
+                }
+            }
+
+            //Если одно длинное слово
+        } else if (relation.getName().length() > 3) {
+            alias.append(relation.getName().substring(0, 3));
+            //Если одно короткое слово
+        } else {
+            alias.append(relation.getName());
+        }
+        return alias.toString().toUpperCase();
+    }
 }

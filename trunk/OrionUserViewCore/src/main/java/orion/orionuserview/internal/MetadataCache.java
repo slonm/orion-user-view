@@ -1,14 +1,9 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package orion.orionuserview.internal;
 
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import orion.orionuserview.DatabaseDef;
 import orion.orionuserview.Relation;
 import orion.orionuserview.RelationSourceType;
 import static orion.orionuserview.utils.SQLUtils.toNullString;
@@ -19,26 +14,26 @@ import static orion.orionuserview.utils.SQLUtils.toIdentifier;
  * @author sl
  */
 //TODO Проверять открытость соединения
-//TODO Может убрать все клонирование?
 public class MetadataCache {
 
     private static final String[] TABLE_TYPES = new String[]{"TABLE", "VIEW"};
-    private final DatabaseDef databaseDef;
-    Set<RelationImpl> relations = new HashSet<RelationImpl>();
+    private final DatabaseMetaData metadata;
+    private Set<RelationImpl> relations = new HashSet<RelationImpl>();
     private boolean isRelationsFilled = false;
     private Map<Relation, List<Column>> columns = new HashMap<Relation, List<Column>>();
     private boolean isColumnsFilled = false;
-    private Set<CrossReference> crossReferences = new HashSet<CrossReference>();
+    private Map<Relation, Set<CrossReference>> pkCrossReference = new HashMap<Relation, Set<CrossReference>>();
+    private Map<Relation, Set<CrossReference>> fkCrossReference = new HashMap<Relation, Set<CrossReference>>();
     private boolean isCrossReferencesFilled = false;
     private Map<Relation, Set<UniqueIndex>> tableOnUniqueIndexes = new HashMap<Relation, Set<UniqueIndex>>();
 
-    public MetadataCache(DatabaseDef databaseDef) {
-        this.databaseDef = databaseDef;
+    public MetadataCache(DatabaseMetaData metadata) {
+        this.metadata = metadata;
     }
 
-    private void fillRelations() throws SQLException {
-        if (!isRelationsFilled && databaseDef.getConnection() != null) {
-            ResultSet rs = databaseDef.getConnection().getMetaData().getTables(null, null, null, TABLE_TYPES);
+    private synchronized void fillRelations() throws SQLException {
+        if (!isRelationsFilled) {
+            ResultSet rs = metadata.getTables(null, null, null, TABLE_TYPES);
             while (rs.next()) {
                 RelationImpl t = new RelationImpl();
                 t.catalog = toNullString(rs, "TABLE_CAT");
@@ -80,9 +75,9 @@ public class MetadataCache {
         return null;
     }
 
-    private void fillColumns() throws SQLException {
-        if (!isColumnsFilled && databaseDef.getConnection() != null) {
-            ResultSet rs = databaseDef.getConnection().getMetaData().getColumns(null, null, null, null);
+    private synchronized void fillColumns() throws SQLException {
+        if (!isColumnsFilled) {
+            ResultSet rs = metadata.getColumns(null, null, null, null);
             while (rs.next()) {
                 Relation relation = getRelation(toNullString(rs, "TABLE_CAT"),
                         toNullString(rs, "TABLE_SCHEM"),
@@ -116,58 +111,100 @@ public class MetadataCache {
         return columns.get(relation);
     }
 
-    private void fillCrossReferences() throws SQLException {
-        if (!isCrossReferencesFilled && databaseDef.getConnection() != null) {
-            ResultSet rs = databaseDef.getConnection().getMetaData().getCrossReference(null, null, null, null, null, null);
-            Map<String, CrossReference> crm = new HashMap<String, CrossReference>();
-            while (rs.next()) {
-                CrossReference c;
-                String key = toNullString(rs, "FK_NAME");
-                if (crm.containsKey(key)) {
-                    c = crm.get(key);
-                    c.pkOnFk.put(toNullString(rs, "PKCOLUMN_NAME"), toNullString(rs, "FKCOLUMN_NAME"));
-                } else {
-                    Relation pkRelation = getRelation(toNullString(rs, "PKTABLE_CAT"), toNullString(rs, "PKTABLE_SCHEM"), toNullString(rs, "PKTABLE_NAME"));
-                    Relation fkRelation = getRelation(toNullString(rs, "FKTABLE_CAT"), toNullString(rs, "FKTABLE_SCHEM"), toNullString(rs, "FKTABLE_NAME"));
-                    if (pkRelation != null && fkRelation != null) {
-                        c = new CrossReference();
-                        c.pkRelation = pkRelation;
-                        c.pkName = toNullString(rs, "PK_NAME");
-                        c.fkRelation = fkRelation;
-                        c.fkName = toNullString(rs, "FK_NAME");
-                        if (rs.getInt("DELETE_RULE") == DatabaseMetaData.importedKeyCascade) {
-                            c.cascadeDelete = true;
-                        }
-                        crm.put(c.fkName, c);
-                        c.pkOnFk.put(toNullString(rs, "PKCOLUMN_NAME"), toNullString(rs, "FKCOLUMN_NAME"));
+    private Collection<CrossReference> fillCrossReferences(ResultSet rs) throws SQLException {
+        Map<String, CrossReference> crm = new HashMap<String, CrossReference>();
+        while (rs.next()) {
+            CrossReference c;
+            String key = toNullString(rs, "FK_NAME");
+            if (crm.containsKey(key)) {
+                c = crm.get(key);
+                c.pkOnFk.put(toNullString(rs, "PKCOLUMN_NAME"), toNullString(rs, "FKCOLUMN_NAME"));
+            } else {
+                Relation pkRelation = getRelation(toNullString(rs, "PKTABLE_CAT"), toNullString(rs, "PKTABLE_SCHEM"), toNullString(rs, "PKTABLE_NAME"));
+                Relation fkRelation = getRelation(toNullString(rs, "FKTABLE_CAT"), toNullString(rs, "FKTABLE_SCHEM"), toNullString(rs, "FKTABLE_NAME"));
+                if (pkRelation != null && fkRelation != null) {
+                    c = new CrossReference();
+                    c.pkRelation = pkRelation;
+                    c.pkName = toNullString(rs, "PK_NAME");
+                    c.fkRelation = fkRelation;
+                    c.fkName = toNullString(rs, "FK_NAME");
+                    if (rs.getInt("DELETE_RULE") == DatabaseMetaData.importedKeyCascade) {
+                        c.cascadeDelete = true;
                     }
+                    crm.put(c.fkName, c);
+                    c.pkOnFk.put(toNullString(rs, "PKCOLUMN_NAME"), toNullString(rs, "FKCOLUMN_NAME"));
                 }
             }
-            crossReferences.addAll(crm.values());
+        }
+        return crm.values();
+    }
+
+    private synchronized void fillCrossReferences() throws SQLException {
+        if (!isCrossReferencesFilled) {
+            Collection<CrossReference> crm = null;
+            //Извлечем все внешние ключи 
+            try {
+                ResultSet rs = metadata.getCrossReference(null, null, null, null, null, null);
+                crm = fillCrossReferences(rs);
+            } catch (SQLException ex) {
+                //Некоторые JDBC драйвера требуют указания или первичного или 
+                //внешнего ключа в getCrossReference
+                crm = new HashSet<CrossReference>();
+                for (Relation relation : getRelations()) {
+                    ResultSet rs = metadata.getCrossReference(
+                            toIdentifier(metadata, relation.getCatalog()),
+                            toIdentifier(metadata, relation.getSchema()),
+                            toIdentifier(metadata, relation.getName()), null, null, null);
+                    crm.addAll(fillCrossReferences(rs));
+                }
+            }
+            //сформируем карту с ключем - таблицей первичного ключа
+            for (CrossReference c : crm) {
+                if (!pkCrossReference.containsKey(c.pkRelation)) {
+                    pkCrossReference.put(c.pkRelation, new HashSet());
+                }
+                pkCrossReference.get(c.pkRelation).add(c);
+            }
+            //На основе этой карты 
+            //сформируем карту с ключем - таблицей внешнего ключа
+            for (Set<CrossReference> crs : pkCrossReference.values()) {
+                for (CrossReference c : crs) {
+                    if (!fkCrossReference.containsKey(c.fkRelation)) {
+                        fkCrossReference.put(c.fkRelation, new HashSet());
+                    }
+                    fkCrossReference.get(c.fkRelation).add(c);
+                }
+            }
             isCrossReferencesFilled = true;
         }
     }
 
-    Set<CrossReference> getCrossReferences(Relation pkRelation, Relation fkRelation)
+    Set<CrossReference> getPkCrossReferences(Relation relation)
             throws SQLException {
         fillCrossReferences();
-        Set<CrossReference> ret = new HashSet<CrossReference>();
-        for (CrossReference cr : crossReferences) {
-
-            if ((pkRelation == null || cr.pkRelation.equals(pkRelation))
-                    && (fkRelation == null || cr.fkRelation.equals(fkRelation))) {
-                ret.add(cr);
-            }
+        if (pkCrossReference.containsKey(relation)) {
+            return pkCrossReference.get(relation);
+        } else {
+            return Collections.EMPTY_SET;
         }
-        return ret;
     }
 
-    Set<UniqueIndex> getUniqueIndexes(Relation relation) throws SQLException {
-        if (!tableOnUniqueIndexes.containsKey(relation) && databaseDef.getConnection() != null) {
-            ResultSet rs = databaseDef.getConnection().getMetaData().getIndexInfo(
-                    toIdentifier(databaseDef.getConnection().getMetaData(), relation.getCatalog()),
-                    toIdentifier(databaseDef.getConnection().getMetaData(), relation.getSchema()),
-                    toIdentifier(databaseDef.getConnection().getMetaData(), relation.getName()), true, true);
+    Set<CrossReference> getFkCrossReferences(Relation relation)
+            throws SQLException {
+        fillCrossReferences();
+        if (fkCrossReference.containsKey(relation)) {
+            return fkCrossReference.get(relation);
+        } else {
+            return Collections.EMPTY_SET;
+        }
+    }
+
+    synchronized Set<UniqueIndex> getUniqueIndexes(Relation relation) throws SQLException {
+        if (!tableOnUniqueIndexes.containsKey(relation) && metadata.getConnection() != null) {
+            ResultSet rs = metadata.getIndexInfo(
+                    toIdentifier(metadata, relation.getCatalog()),
+                    toIdentifier(metadata, relation.getSchema()),
+                    toIdentifier(metadata, relation.getName()), true, true);
             Map<String, UniqueIndex> uim = new HashMap<String, UniqueIndex>();
             while (rs.next()) {
                 //Из-за бага в драйвере jayBird дополнительно убедимся что это уникальный индекс
@@ -186,10 +223,10 @@ public class MetadataCache {
                             ui.name = toNullString(rs, "INDEX_NAME");
                             uim.put(ui.name, ui);
                             //Теперь выясним является ли индекс первичным ключем
-                            ResultSet rs1 = databaseDef.getConnection().getMetaData().getPrimaryKeys(
-                                    toIdentifier(databaseDef.getConnection().getMetaData(), relation.getCatalog()),
-                                    toIdentifier(databaseDef.getConnection().getMetaData(), relation.getSchema()),
-                                    toIdentifier(databaseDef.getConnection().getMetaData(), relation.getName()));
+                            ResultSet rs1 = metadata.getPrimaryKeys(
+                                    toIdentifier(metadata, relation.getCatalog()),
+                                    toIdentifier(metadata, relation.getSchema()),
+                                    toIdentifier(metadata, relation.getName()));
                             while (rs1.next()) {
                                 if (toNullString(rs1, "PK_NAME").equals(ui.name)) {
                                     ui.isPrimaryKey = true;
@@ -204,12 +241,19 @@ public class MetadataCache {
             }
             for (UniqueIndex ui : uim.values()) {
                 if (!tableOnUniqueIndexes.containsKey(ui.relation)) {
-                    tableOnUniqueIndexes.put(relation, new HashSet());
+                    tableOnUniqueIndexes.put(ui.relation, new HashSet());
                 }
                 tableOnUniqueIndexes.get(ui.relation).add(ui);
             }
+            if (!tableOnUniqueIndexes.containsKey(relation)) {
+                tableOnUniqueIndexes.put(relation, Collections.EMPTY_SET);
+            }
         }
-        return tableOnUniqueIndexes.get(relation);
+        if (!tableOnUniqueIndexes.containsKey(relation)) {
+            return tableOnUniqueIndexes.get(relation);
+        } else {
+            return Collections.EMPTY_SET;
+        }
     }
 
     void init() throws SQLException {

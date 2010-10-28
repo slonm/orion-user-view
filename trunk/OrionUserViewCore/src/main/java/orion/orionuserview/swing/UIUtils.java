@@ -45,29 +45,29 @@ public class UIUtils {
 
             retName = (rd.getCatalog() != null ? rd.getCatalog() + "." : "")
                     + (rd.getSchema() != null ? rd.getSchema() + "." : "") + retName;
-//            if (rd instanceof ForeignKeyDef) {
-//                String pkAttrs = "", fkAttrs = "";
-//                ForeignKeyDef fkd = (ForeignKeyDef) rd;
-//                for (String pkAttr : fkd.getPkOnFk().keySet()) {
-//                    pkAttrs = (pkAttrs.length() != 0 ? pkAttrs + ", " : "") + pkAttr;
-//                    fkAttrs = (fkAttrs.length() != 0 ? fkAttrs + ", " : "") + fkd.getPkOnFk().get(pkAttr);
-//                }
-//                String leftAttrs = fkAttrs;
-//                String rightAttrs = pkAttrs;
-//                String arrow=" --> ";
-//                boolean nameAtLeft = false;
-//                if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY||
-//                    fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_FK) {
-//                    nameAtLeft = true;
-//                }else if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_PK) {
-//                    nameAtLeft = true;
-//                    leftAttrs = pkAttrs;
-//                    rightAttrs = fkAttrs;
-//                    arrow = " <-- ";
-//                }
-//
-//                retName = (nameAtLeft ? retName + " " : "") + "{" + leftAttrs + "}" + arrow + (!nameAtLeft ? retName + " " : "") + "{" + rightAttrs + "}";
-//            }
+            if (rd instanceof ForeignKeyDef) {
+                String pkAttrs = "", fkAttrs = "";
+                ForeignKeyDef fkd = (ForeignKeyDef) rd;
+                for (String pkAttr : fkd.getPkOnFk().keySet()) {
+                    pkAttrs = (pkAttrs.length() != 0 ? pkAttrs + ", " : "") + pkAttr;
+                    fkAttrs = (fkAttrs.length() != 0 ? fkAttrs + ", " : "") + fkd.getPkOnFk().get(pkAttr);
+                }
+                String leftAttrs = fkAttrs;
+                String rightAttrs = pkAttrs;
+                String arrow=" --> ";
+                boolean nameAtLeft = false;
+                if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY||
+                    fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_FK) {
+                    nameAtLeft = true;
+                }else if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_ONE_PK) {
+                    nameAtLeft = true;
+                    leftAttrs = pkAttrs;
+                    rightAttrs = fkAttrs;
+                    arrow = " <-- ";
+                }
+
+                retName = (nameAtLeft ? retName + " " : "") + "{" + leftAttrs + "}" + arrow + (!nameAtLeft ? retName + " " : "") + "{" + rightAttrs + "}";
+            }
         }
         if (attributeDef.getRemarks() == null) {
             return retName;
