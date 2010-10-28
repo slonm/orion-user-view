@@ -26,6 +26,7 @@ public class MetadataCache {
     private Map<Relation, Set<CrossReference>> fkCrossReference = new HashMap<Relation, Set<CrossReference>>();
     private boolean isCrossReferencesFilled = false;
     private Map<Relation, Set<UniqueIndex>> tableOnUniqueIndexes = new HashMap<Relation, Set<UniqueIndex>>();
+    private boolean isUniqueIndexesFilled = false;
 
     public MetadataCache(DatabaseMetaData metadata) {
         this.metadata = metadata;
@@ -199,42 +200,53 @@ public class MetadataCache {
         }
     }
 
-    synchronized Set<UniqueIndex> getUniqueIndexes(Relation relation) throws SQLException {
-        if (!tableOnUniqueIndexes.containsKey(relation) && metadata.getConnection() != null) {
-            ResultSet rs = metadata.getIndexInfo(
-                    toIdentifier(metadata, relation.getCatalog()),
-                    toIdentifier(metadata, relation.getSchema()),
-                    toIdentifier(metadata, relation.getName()), true, true);
+    Set<UniqueIndex> getUniqueIndexes(Relation relation) throws SQLException {
+        fillUniqueIndexes();
+        if (!tableOnUniqueIndexes.containsKey(relation)) {
+            return tableOnUniqueIndexes.get(relation);
+        } else {
+            return Collections.EMPTY_SET;
+        }
+    }
+
+    private synchronized void fillUniqueIndexes() throws SQLException {
+        if (!isUniqueIndexesFilled) {
             Map<String, UniqueIndex> uim = new HashMap<String, UniqueIndex>();
-            while (rs.next()) {
-                //Из-за бага в драйвере jayBird дополнительно убедимся что это уникальный индекс
-                if (!rs.getBoolean("NON_UNIQUE")) {
-                    UniqueIndex ui;
-                    String key = toNullString(rs, "INDEX_NAME");
-                    if (uim.containsKey(key)) {
-                        ui = uim.get(key);
-                        ui.columns.add(toNullString(rs, "COLUMN_NAME"));
-                    } else {
-                        Relation uiRelation = getRelation(toNullString(rs, "TABLE_CAT"), toNullString(rs, "TABLE_SCHEM"), toNullString(rs, "TABLE_NAME"));
-                        if (uiRelation != null) {
-                            ui = new UniqueIndex();
-                            //таблица может не совпадать с relation
-                            ui.relation = uiRelation;
-                            ui.name = toNullString(rs, "INDEX_NAME");
-                            uim.put(ui.name, ui);
-                            //Теперь выясним является ли индекс первичным ключем
-                            ResultSet rs1 = metadata.getPrimaryKeys(
-                                    toIdentifier(metadata, relation.getCatalog()),
-                                    toIdentifier(metadata, relation.getSchema()),
-                                    toIdentifier(metadata, relation.getName()));
-                            while (rs1.next()) {
-                                if (toNullString(rs1, "PK_NAME").equals(ui.name)) {
-                                    ui.isPrimaryKey = true;
-                                    break;
-                                }
-                            }
-                            rs1.close();
+            for (Relation relation : getRelations()) {
+                ResultSet rs = metadata.getIndexInfo(
+                        toIdentifier(metadata, relation.getCatalog()),
+                        toIdentifier(metadata, relation.getSchema()),
+                        toIdentifier(metadata, relation.getName()), true, true);
+                while (rs.next()) {
+                    //Из-за бага в драйвере jayBird дополнительно убедимся что это уникальный индекс
+                    if (!rs.getBoolean("NON_UNIQUE")) {
+                        UniqueIndex ui;
+                        String key = toNullString(rs, "INDEX_NAME");
+                        if (uim.containsKey(key)) {
+                            ui = uim.get(key);
                             ui.columns.add(toNullString(rs, "COLUMN_NAME"));
+                        } else {
+                            Relation uiRelation = getRelation(toNullString(rs, "TABLE_CAT"), toNullString(rs, "TABLE_SCHEM"), toNullString(rs, "TABLE_NAME"));
+                            if (uiRelation != null) {
+                                ui = new UniqueIndex();
+                                //таблица может не совпадать с relation
+                                ui.relation = uiRelation;
+                                ui.name = toNullString(rs, "INDEX_NAME");
+                                uim.put(ui.name, ui);
+                                //Теперь выясним является ли индекс первичным ключем
+                                ResultSet rs1 = metadata.getPrimaryKeys(
+                                        toIdentifier(metadata, relation.getCatalog()),
+                                        toIdentifier(metadata, relation.getSchema()),
+                                        toIdentifier(metadata, relation.getName()));
+                                while (rs1.next()) {
+                                    if (toNullString(rs1, "PK_NAME").equals(ui.name)) {
+                                        ui.isPrimaryKey = true;
+                                        break;
+                                    }
+                                }
+                                rs1.close();
+                                ui.columns.add(toNullString(rs, "COLUMN_NAME"));
+                            }
                         }
                     }
                 }
@@ -245,14 +257,7 @@ public class MetadataCache {
                 }
                 tableOnUniqueIndexes.get(ui.relation).add(ui);
             }
-            if (!tableOnUniqueIndexes.containsKey(relation)) {
-                tableOnUniqueIndexes.put(relation, Collections.EMPTY_SET);
-            }
-        }
-        if (!tableOnUniqueIndexes.containsKey(relation)) {
-            return tableOnUniqueIndexes.get(relation);
-        } else {
-            return Collections.EMPTY_SET;
+            isUniqueIndexesFilled = true;
         }
     }
 
@@ -260,5 +265,6 @@ public class MetadataCache {
         fillRelations();
         fillColumns();
         fillCrossReferences();
+        fillUniqueIndexes();
     }
 }
