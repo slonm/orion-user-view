@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package orion.orionuserview.internal;
 
 import java.sql.SQLException;
@@ -41,6 +37,11 @@ public class EntityDefImpl extends RelationDefImpl implements EntityDef {
 
     public void setAdditionalReferenceBooks(Set<Relation> additionalReferenceBooks) {
         this.additionalReferenceBooks = additionalReferenceBooks;
+    }
+
+    @Override
+    public String getAlias() {
+        return "ROOT";
     }
 
 }

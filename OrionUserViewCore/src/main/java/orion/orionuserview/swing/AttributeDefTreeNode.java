@@ -25,21 +25,22 @@ public class AttributeDefTreeNode implements TreeNode {
     private final RelationDef relationDef;
     private final AttributeDefTreeNode parent;
     private List<AttributeDefTreeNode> children;
-    private boolean closureOneLeaf = true;
+    private final boolean foldOneLeaf;
 
     public AttributeDef getAttributeDef() {
         init();
         return attributeDef;
     }
 
-    public AttributeDefTreeNode(AttributeDefTreeNode parent, AttributeDef attributeDef) {
+    public AttributeDefTreeNode(AttributeDefTreeNode parent, AttributeDef attributeDef, boolean foldOneLeaf) {
         this.attributeDef = Defense.notNull(attributeDef, "attributeDef");
         this.parent = parent;
+        this.foldOneLeaf = foldOneLeaf;
         relationDef = (attributeDef instanceof RelationDef) ? (RelationDef) attributeDef : null;
     }
 
-    public AttributeDefTreeNode(EntityDef rootRelationDef) {
-        this(null, rootRelationDef);
+    public AttributeDefTreeNode(EntityDef rootRelationDef, boolean foldOneLeaf) {
+        this(null, rootRelationDef, foldOneLeaf);
     }
 
     @Override
@@ -82,7 +83,7 @@ public class AttributeDefTreeNode implements TreeNode {
 
     @Override
     public boolean isLeaf() {
-        if (closureOneLeaf) {
+        if (foldOneLeaf) {
             init();
             if (children == null) {
                 return true;
@@ -112,7 +113,18 @@ public class AttributeDefTreeNode implements TreeNode {
                 relationDef.init();
                 children = new ArrayList<AttributeDefTreeNode>();
                 for (AttributeDef ad : relationDef) {
-                    children.add(new AttributeDefTreeNode(this, ad));
+                    //Бывает ситуация что в таблице нет нет видимых полей и зависимых таблиц
+                    //Такую вырожденную ветку не будем добавлять вообще
+                    //FIXME не обрабатываются вложенные вырожденные ветки,
+                    //т.к это затрудняет ленивую инциализацию
+                    RelationDef rd = null;
+                    if (ad instanceof RelationDef) {
+                        rd = (RelationDef) ad;
+                        rd.init();
+                    }
+                    if (rd == null || rd.size() != 0) {
+                        children.add(new AttributeDefTreeNode(this, ad, foldOneLeaf));
+                    }
                 }
             } catch (SQLException ex) {
                 throw new RuntimeException(ex.getMessage());

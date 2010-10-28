@@ -29,4 +29,6 @@ public interface DatabaseDef {
     boolean isConnected();
 
     Set<EntityDef> getEntityDefs() throws SQLException;
+
+    public String newAlias(RelationDef relation);
 }

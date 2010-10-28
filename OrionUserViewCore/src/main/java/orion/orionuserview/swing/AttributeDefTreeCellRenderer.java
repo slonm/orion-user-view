@@ -16,6 +16,7 @@ import orion.orionuserview.utils.Defense;
 /**
  *
  * @author sl
+ * //TODO Вынести выбор иконы в AttributeDefTreeNode
  */
 public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
 
@@ -33,7 +34,8 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
             int row, boolean hasFocus) {
         super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
         if (value instanceof AttributeDefTreeNode) {
-            AttributeDef ad = ((AttributeDefTreeNode) value).getAttributeDef();
+            AttributeDefTreeNode node=(AttributeDefTreeNode) value;
+            AttributeDef ad = node.getAttributeDef();
             StringBuffer toolTop = new StringBuffer();
             toolTop.append("<html><b>Name: </b>");
             if (ad instanceof RelationDef) {
@@ -43,6 +45,8 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
                 toolTop.append(ad.getName());
                 toolTop.append("<br><b>Type: </b>");
                 toolTop.append(rd.getRelationSourceType());
+                toolTop.append("<br><b>Alias: </b>");
+                toolTop.append(rd.getAlias());
                 if (ad instanceof ForeignKeyDef) {
                     ForeignKeyDef fkd = (ForeignKeyDef) ad;
                     toolTop.append("<br><b>Foreign key: </b>");
@@ -52,16 +56,16 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
                     if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY) {
                         setIcon(icons.get("ManyTables"));
                     }
-                    if(leaf){
-                        setIcon(iconByDataType(getNuclearAttributeDefLeaf(rd).getDataType()));
-                    }
+                }
+                if (node.isLeaf()) {
+                    setIcon(iconByLeafRelation(rd));
                 }
             } else if (ad instanceof NuclearAttributeDef) {
                 NuclearAttributeDef sad = (NuclearAttributeDef) ad;
                 toolTop.append(sad.getName());
                 toolTop.append("<br><b>Data type: </b>");
                 toolTop.append(sad.getDataType());
-                setIcon(iconByDataType(sad.getDataType()));
+                setIcon(iconByDataType(sad.getDataType(), false));
             }
             setToolTipText(toolTop.toString());
             setText(UIUtils.attributeDefPresentableNameForAdmin(globals, ad));
@@ -69,45 +73,59 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
         return this;
     }
 
-    private NuclearAttributeDef getNuclearAttributeDefLeaf(RelationDef rd) {
-        AttributeDef childAd=rd.get(0);
-        if(childAd instanceof NuclearAttributeDef){
-            return (NuclearAttributeDef) childAd;
-        }else{
-            return getNuclearAttributeDefLeaf((RelationDef) childAd);
+    private Icon iconByLeafRelation(RelationDef rd) {
+        AttributeDef childAd = rd;
+        boolean isArray = false;
+        while (!(childAd instanceof NuclearAttributeDef)) {
+            if (childAd instanceof ForeignKeyDef
+                    && ((ForeignKeyDef) childAd).getForeignKeyType() == ForeignKeyType.ONE_TO_MANY) {
+                isArray = true;
+            }
+            childAd = ((RelationDef) childAd).get(0);
         }
-
+        return iconByDataType(((NuclearAttributeDef) childAd).getDataType(), isArray);
     }
 
-    private Icon iconByDataType(Integer dataType) {
+    private Icon iconByDataType(Integer dataType, Boolean isArray) {
+        String iconName;
         switch (dataType) {
             case Types.BIGINT:
             case Types.INTEGER:
             case Types.NUMERIC:
             case Types.SMALLINT:
             case Types.TINYINT:
-                return icons.get("Number");
+                iconName = "Number";
+                break;
             case Types.BOOLEAN:
             case Types.BIT:
-                return icons.get("Boolean");
+                iconName = "Boolean";
+                break;
             case Types.DATE:
             case Types.TIME:
             case Types.TIMESTAMP:
-                return icons.get("DateTime");
+                iconName = "DateTime";
+                break;
             case Types.DECIMAL:
             case Types.DOUBLE:
             case Types.FLOAT:
             case Types.REAL:
-                return icons.get("Float");
+                iconName = "Float";
+                break;
             case Types.CHAR:
             case Types.LONGNVARCHAR:
             case Types.LONGVARCHAR:
             case Types.NCHAR:
             case Types.NVARCHAR:
             case Types.VARCHAR:
-                return icons.get("Text");
+                iconName = "Text";
+                break;
             default:
-                return icons.get("Unknown");
+                iconName = "Unknown";
+                break;
         }
+        if (isArray) {
+            iconName ="Many"+iconName+"s";
+        }
+        return icons.get(iconName);
     }
 }

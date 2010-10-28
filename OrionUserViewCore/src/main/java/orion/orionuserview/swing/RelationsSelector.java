@@ -35,7 +35,7 @@ public class RelationsSelector extends javax.swing.JPanel {
     private static final ResourceMap resourceMap = Application.getInstance().getContext().getResourceMap(SimpleConnectionSelector.class);
     private DefaultTableModel model = new javax.swing.table.DefaultTableModel(
             null,
-            new String[]{"Таблица", "E      D       R      H"}) {
+            new String[]{"Таблица", "E      D      R      H "}) {
 
         Class[] types = new Class[]{Relation.class, Relation.class};
 

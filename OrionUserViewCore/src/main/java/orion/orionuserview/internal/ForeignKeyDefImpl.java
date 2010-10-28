@@ -1,10 +1,5 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package orion.orionuserview.internal;
 
-import java.awt.image.CropImageFilter;
 import java.util.*;
 import orion.orionuserview.ForeignKeyDef;
 import orion.orionuserview.ForeignKeyType;
@@ -19,6 +14,7 @@ public class ForeignKeyDefImpl extends RelationDefImpl implements ForeignKeyDef{
 
     private CrossReference crossReference;
     private ForeignKeyType foregnKeyType;
+    private String alias;
 
     /**
      * for XMLEncoder
@@ -58,6 +54,18 @@ public class ForeignKeyDefImpl extends RelationDefImpl implements ForeignKeyDef{
 
     public CrossReference getCrossReference() {
         return crossReference;
+    }
+
+    @Override
+    public String getAlias() {
+        if(alias==null){
+            this.alias = getDatabaseDef().newAlias(this);
+        }
+        return alias;
+    }
+
+    public void setAlias(String alias) {
+        this.alias = alias;
     }
 
 }

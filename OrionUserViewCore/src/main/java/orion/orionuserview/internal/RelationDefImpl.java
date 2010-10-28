@@ -12,7 +12,7 @@ import orion.orionuserview.utils.Defense;
  * 
  * @author sl
  */
-public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
+public abstract class RelationDefImpl extends AttributeDefImpl implements RelationDef {
 
     private Relation relation;
     private List<AttributeDef> attributes = new ArrayList<AttributeDef>();
@@ -42,7 +42,7 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
      * @throws SQLException
      */
     @Override
-    public void init() throws SQLException {
+    public synchronized void init() throws SQLException {
         if (!initiated) {
             MetadataCache metadataCache = rootEntityDefImpl.getDatabaseDefImpl().getMetadataCache();
             //Может uniqueIndexes уже заполнено родительским отношением, тогда оставим его
@@ -78,7 +78,7 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
     private void replaceNuclearAttributeByForeignKey() throws SQLException {
         //---------------Добавляем внешние ключи ManyTo(One|Many)----------------------
         MetadataCache metadataCache = rootEntityDefImpl.getDatabaseDefImpl().getMetadataCache();
-        Set<CrossReference> crossReferences = metadataCache.getCrossReferences(null, relation);
+        Set<CrossReference> crossReferences = metadataCache.getFkCrossReferences(relation);
         //Создадим и сформируем объекты ForeignKeyDefImpl
         for (CrossReference crRef : crossReferences) {
             if (crRef.pkRelation.getRelationType() != RelationType.HIDDEN) {
@@ -137,7 +137,7 @@ public class RelationDefImpl extends AttributeDefImpl implements RelationDef {
         if (relation.getRelationType() != RelationType.REFERENCE_BOOK
                 && !getRoot().getAdditionalReferenceBooks().contains(relation)) {
             //Закешируем ResultSet в множество для удобства работы
-            Set<CrossReference> crossReferences = metadataCache.getCrossReferences(relation, null);
+            Set<CrossReference> crossReferences = metadataCache.getPkCrossReferences(relation);
             //Множество уде добавленных зависимых таблиц
             Set<Relation> addedRelations = new HashSet<Relation>();
             //Создадим и сформируем объекты ForeignKeyDefImpl

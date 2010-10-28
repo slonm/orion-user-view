@@ -48,6 +48,7 @@ public abstract class AttributeDefImpl implements AttributeDef, Serializable{
         return relation;
     }
 
+    @Override
     public void setRelation(RelationDef relation) {
         this.relation = relation;
     }

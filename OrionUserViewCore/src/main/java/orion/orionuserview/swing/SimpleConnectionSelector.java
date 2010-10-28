@@ -36,6 +36,9 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
 //        _URLControl.setText("jdbc:firebirdsql:172.16.1.4/3050:/var/lib/firebird/2.1/data/ouv.fdb");
         userControl.setText("SYSDBA");
         passwordControl.setText("ntktajy");
+//        _URLControl.setText("jdbc:sqlserver://172.16.1.2;databaseName=abo2010");
+//        userControl.setText("zav");
+//        passwordControl.setText("zav");
         //----End Debug Block----
         globals.addHint("Настройте подключение к базе данных");
     }
@@ -59,6 +62,7 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
         jLabel5 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
+        jButton3 = new javax.swing.JButton();
 
         driverControl.setModel(new javax.swing.DefaultComboBoxModel(DriversUtils.getAvailableDriverNames().toArray()));
         driverControl.setName("driverControl"); // NOI18N
@@ -93,6 +97,9 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
         jButton2.setAction(actionMap.get("connect")); // NOI18N
         jButton2.setName("jButton2"); // NOI18N
 
+        jButton3.setAction(actionMap.get("disconnect")); // NOI18N
+        jButton3.setName("jButton3"); // NOI18N
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -114,7 +121,9 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
                             .addComponent(passwordControl, javax.swing.GroupLayout.DEFAULT_SIZE, 464, Short.MAX_VALUE)))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jButton1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 324, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 200, Short.MAX_VALUE)
+                        .addComponent(jButton3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton2)))
                 .addContainerGap())
         );
@@ -140,7 +149,8 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 254, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton1)
-                    .addComponent(jButton2))
+                    .addComponent(jButton2)
+                    .addComponent(jButton3))
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
@@ -153,6 +163,7 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
     private javax.swing.JComboBox driverControl;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
+    private javax.swing.JButton jButton3;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -161,7 +172,7 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
     private javax.swing.JTextField userControl;
     // End of variables declaration//GEN-END:variables
 
-    void driverChanged() {
+    private void driverChanged() {
         DriverDef dd = DriversUtils.getDriverDefs().get((String) driverControl.getSelectedItem());
         _URLControl.setText(dd.getURLFormat());
     }
@@ -189,7 +200,7 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
         try {
             DatabaseDef dd = DatabaseDefFactory.build(_URLControl.getText(), driverProperties);
         //----Begin Debug Block----
-            dd.getHiddenAttrPatterns().add("CODE");
+            dd.getHiddenAttrPatterns().add("CODE|Code|code");
             dd.getHiddenAttrPatterns().add("HASFILLED_NAME");
             dd.getHiddenAttrPatterns().add("HASFILLED_ROLE");
             dd.getHiddenAttrPatterns().add("ID");
@@ -202,6 +213,15 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
             globals.addInfo(resourceMap.getString("MESSAGE.ConnectionSuccesful"));
         } catch (SQLException ex) {
             //TODO сделать более информативно
+            globals.addError(resourceMap.getString("MESSAGE.ConnectionFiled"));
+        }
+    }
+
+    @Action
+    public void disconnect() {
+        try {
+            globals.getDatabaseDef().getConnection().close();
+        } catch (Exception ex) {
             globals.addError(resourceMap.getString("MESSAGE.ConnectionFiled"));
         }
     }

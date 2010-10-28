@@ -9,13 +9,13 @@ import java.sql.SQLException;
 import java.util.*;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.Icon;
-import javax.swing.JTree;
 import javax.swing.ToolTipManager;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import org.jdesktop.application.Application;
 import org.jdesktop.application.ResourceMap;
+import orion.orionuserview.AttributeDef;
 import orion.orionuserview.EntityDef;
 import orion.orionuserview.RelationDef;
 import orion.orionuserview.RelationType;
@@ -32,11 +32,17 @@ public class AttributesSelector extends javax.swing.JPanel {
 
     static {
         addDataTypeIcon("Boolean");
+        addDataTypeIcon("ManyBooleans");
         addDataTypeIcon("DateTime");
+        addDataTypeIcon("ManyDateTimes");
         addDataTypeIcon("Float");
+        addDataTypeIcon("ManyFloats");
         addDataTypeIcon("Number");
+        addDataTypeIcon("ManyNumbers");
         addDataTypeIcon("Text");
+        addDataTypeIcon("ManyTexts");
         addDataTypeIcon("Unknown");
+        addDataTypeIcon("ManyUnknowns");
         addDataTypeIcon("OneTable");
         addDataTypeIcon("ManyTables");
     }
@@ -96,8 +102,7 @@ public class AttributesSelector extends javax.swing.JPanel {
 
         jScrollPane1.setName("jScrollPane1"); // NOI18N
 
-        javax.swing.tree.DefaultMutableTreeNode treeNode1 = new javax.swing.tree.DefaultMutableTreeNode("*");
-        baseTree.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
+        baseTree.setModel(new DefaultTreeModel(null));
         baseTree.setCellRenderer(new AttributeDefTreeCellRenderer(treeNodeIcons, globals));
         baseTree.setName("baseTree"); // NOI18N
         jScrollPane1.setViewportView(baseTree);
@@ -161,6 +166,11 @@ public class AttributesSelector extends javax.swing.JPanel {
     }//GEN-LAST:event_entityControlItemStateChanged
 
     private void formComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentShown
+        jSplitPane1.setDividerLocation(.5);
+        String adName = null;
+        if (entityControl.getSelectedItem() != null) {
+            adName = ((AttributeDef) entityControl.getSelectedItem()).getName();
+        }
         try {
             List<EntityDef> entityDefs = new ArrayList(globals.getDatabaseDef().getEntityDefs());
             Collections.sort(entityDefs, new Comparator<EntityDef>() {
@@ -171,7 +181,14 @@ public class AttributesSelector extends javax.swing.JPanel {
                 }
             });
             entityControl.setModel(new DefaultComboBoxModel(entityDefs.toArray()));
-            //entityControl.setSelectedIndex(0);
+            if (adName != null) {
+                for (int i = 0; i < entityControl.getItemCount(); i++) {
+                    if (((AttributeDef) entityControl.getItemAt(i)).getName().equals(adName)) {
+                        entityControl.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
             updateRoot();
         } catch (SQLException ex) {
             globals.addError("Ошибка получения списка сущностей");
@@ -189,42 +206,26 @@ public class AttributesSelector extends javax.swing.JPanel {
 
     private void updateRoot() {
         DefaultTreeModel model = (DefaultTreeModel) baseTree.getModel();
-        TreeNode root = new AttributeDefTreeNode((EntityDef) entityControl.getSelectedItem());
-        model.setRoot(root);
-        //Развернем весь первый уровень
-        TreePath rootPath = new TreePath(root);
-        for (Enumeration rootChild = root.children(); rootChild.hasMoreElements();) {
-            AttributeDefTreeNode rootChildNode = (AttributeDefTreeNode) rootChild.nextElement();
-            TreePath childPath=rootPath.pathByAddingChild(rootChildNode);
-            baseTree.expandPath(childPath);
-            //Развернем первый ровень зависимых таблиц
-            if (rootChildNode.getAttributeDef() instanceof RelationDef
-                    && ((RelationDef) rootChildNode.getAttributeDef()).getRelationType() == RelationType.DEPENDENT) {
-                for (Enumeration dependChild = rootChildNode.children(); dependChild.hasMoreElements();) {
-                    TreeNode dependChildNode = (TreeNode) dependChild.nextElement();
-                    baseTree.expandPath(childPath.pathByAddingChild(dependChildNode));
+        if (entityControl.getSelectedItem() == null) {
+            model.setRoot(null);
+        } else {
+            TreeNode root = new AttributeDefTreeNode((EntityDef) entityControl.getSelectedItem(), true);
+            model.setRoot(root);
+            //Развернем весь первый уровень
+            TreePath rootPath = new TreePath(root);
+            for (Enumeration rootChild = root.children(); rootChild.hasMoreElements();) {
+                AttributeDefTreeNode rootChildNode = (AttributeDefTreeNode) rootChild.nextElement();
+                TreePath childPath = rootPath.pathByAddingChild(rootChildNode);
+                baseTree.expandPath(childPath);
+                //Развернем первый уровень зависимых таблиц
+                if (rootChildNode.getAttributeDef() instanceof RelationDef
+                        && ((RelationDef) rootChildNode.getAttributeDef()).getRelationType() == RelationType.DEPENDENT) {
+                    for (Enumeration dependChild = rootChildNode.children(); dependChild.hasMoreElements();) {
+                        TreeNode dependChildNode = (TreeNode) dependChild.nextElement();
+                        baseTree.expandPath(childPath.pathByAddingChild(dependChildNode));
+                    }
                 }
             }
-        }
-
-
-    }
-
-    private void expandAll(JTree tree, TreePath parent, boolean expand) {
-        // Traverse children
-        TreeNode node = (TreeNode) parent.getLastPathComponent();
-        if (node.getChildCount() >= 0) {
-            for (Enumeration e = node.children(); e.hasMoreElements();) {
-                TreeNode n = (TreeNode) e.nextElement();
-                TreePath path = parent.pathByAddingChild(n);
-            }
-        }
-
-        // Expansion or collapse must be done bottom-up
-        if (expand) {
-            tree.expandPath(parent);
-        } else {
-            tree.collapsePath(parent);
         }
     }
 }

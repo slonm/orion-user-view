@@ -1,6 +1,5 @@
 package orion.orionuserview.internal;
 
-import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import orion.orionuserview.RelationSourceType;
 
@@ -27,6 +26,11 @@ public class EmbeddedGroupDefImpl extends RelationDefImpl{
     @Override
     public void init() throws SQLException {
         throw new RuntimeException();
+    }
+
+    @Override
+    public String getAlias() {
+        return getOwner().getAlias();
     }
 
 }
