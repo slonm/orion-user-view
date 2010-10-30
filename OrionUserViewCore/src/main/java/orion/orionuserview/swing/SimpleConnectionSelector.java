@@ -36,9 +36,9 @@ public class SimpleConnectionSelector extends javax.swing.JPanel {
 //        _URLControl.setText("jdbc:firebirdsql:172.16.1.4/3050:/var/lib/firebird/2.1/data/ouv.fdb");
         userControl.setText("SYSDBA");
         passwordControl.setText("ntktajy");
-        _URLControl.setText("jdbc:sqlserver://172.16.1.2;databaseName=abo2010");
-        userControl.setText("zav");
-        passwordControl.setText("zav");
+//        _URLControl.setText("jdbc:sqlserver://172.16.1.2;databaseName=abo2010");
+//        userControl.setText("zav");
+//        passwordControl.setText("zav");
         //----End Debug Block----
         globals.addHint("Настройте подключение к базе данных");
     }

@@ -37,4 +37,10 @@ public interface AttributeDef {
      * Возвращает имя атрибута
      */
     String getName();
+    
+    /**
+     * Будет ли включение этого атрибута в выборку добавлять
+     * массив значенний
+     */
+    boolean isArray();
 }

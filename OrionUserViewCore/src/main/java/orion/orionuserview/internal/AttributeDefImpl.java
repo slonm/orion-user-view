@@ -79,4 +79,9 @@ public abstract class AttributeDefImpl implements AttributeDef, Serializable{
         return remarks == null ? name : remarks;
     }
 
+    @Override
+    public boolean isArray() {
+        return getOwner().isArray();
+    }
+
 }
