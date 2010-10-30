@@ -44,4 +44,9 @@ public class EntityDefImpl extends RelationDefImpl implements EntityDef {
         return "ROOT";
     }
 
+    @Override
+    public boolean isArray() {
+        return false;
+    }
+
 }

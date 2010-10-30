@@ -8,16 +8,14 @@ import orion.orionuserview.RelationSourceType;
  * По аналогии с Embedded в Hibernate
  * @author sl
  */
-
 //TODO Чем группа отличается от внешнего ключа OneToOne?
-public class EmbeddedGroupDefImpl extends RelationDefImpl{
+public class EmbeddedGroupDefImpl extends RelationDefImpl {
 
 //    public EmbeddedGroupDefImpl(MetadataCache databaseInfo, String catalog,
 //            String schema, String name,
 //            RelationDefImpl relation, RelationSourceType type) {
 //        super(databaseInfo, catalog, schema, name, relation, type, null);
 //    }
-
     @Override
     public RelationSourceType getRelationSourceType() {
         return RelationSourceType.GROUP;
@@ -32,5 +30,4 @@ public class EmbeddedGroupDefImpl extends RelationDefImpl{
     public String getAlias() {
         return getOwner().getAlias();
     }
-
 }

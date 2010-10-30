@@ -13,7 +13,7 @@ import orion.orionuserview.RelationDef;
 public class ForeignKeyDefImpl extends RelationDefImpl implements ForeignKeyDef{
 
     private CrossReference crossReference;
-    private ForeignKeyType foregnKeyType;
+    private ForeignKeyType foreignKeyType;
     private String alias;
 
     /**
@@ -23,10 +23,10 @@ public class ForeignKeyDefImpl extends RelationDefImpl implements ForeignKeyDef{
     }
 
     ForeignKeyDefImpl(Relation relation, RelationDef relationDef,
-            EntityDefImpl rootRelation, ForeignKeyType foregnKeyType,
+            EntityDefImpl rootRelation, ForeignKeyType foreignKeyType,
             CrossReference cr) {
         super(relation, relationDef, rootRelation);
-        this.foregnKeyType = foregnKeyType;
+        this.foreignKeyType = foreignKeyType;
         this.crossReference=cr;
     }
 
@@ -36,11 +36,11 @@ public class ForeignKeyDefImpl extends RelationDefImpl implements ForeignKeyDef{
      */
     @Override
     public ForeignKeyType getForeignKeyType() {
-        return foregnKeyType;
+        return foreignKeyType;
     }
 
     public void setForegnKeyType(ForeignKeyType foregnKeyType) {
-        this.foregnKeyType = foregnKeyType;
+        this.foreignKeyType = foregnKeyType;
     }
 
     /**
@@ -66,6 +66,11 @@ public class ForeignKeyDefImpl extends RelationDefImpl implements ForeignKeyDef{
 
     public void setAlias(String alias) {
         this.alias = alias;
+    }
+
+    @Override
+    public boolean isArray() {
+        return foreignKeyType==ForeignKeyType.ONE_TO_MANY||super.isArray();
     }
 
 }

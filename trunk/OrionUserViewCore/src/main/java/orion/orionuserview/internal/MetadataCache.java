@@ -202,7 +202,7 @@ public class MetadataCache {
 
     Set<UniqueIndex> getUniqueIndexes(Relation relation) throws SQLException {
         fillUniqueIndexes();
-        if (!tableOnUniqueIndexes.containsKey(relation)) {
+        if (tableOnUniqueIndexes.containsKey(relation)) {
             return tableOnUniqueIndexes.get(relation);
         } else {
             return Collections.EMPTY_SET;

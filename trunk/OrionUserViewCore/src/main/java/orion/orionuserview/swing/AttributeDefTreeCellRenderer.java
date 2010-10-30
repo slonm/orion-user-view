@@ -34,13 +34,17 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
             int row, boolean hasFocus) {
         super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
         if (value instanceof AttributeDefTreeNode) {
-            AttributeDefTreeNode node=(AttributeDefTreeNode) value;
+            AttributeDefTreeNode node = (AttributeDefTreeNode) value;
             AttributeDef ad = node.getAttributeDef();
-            StringBuffer toolTop = new StringBuffer();
+            StringBuilder toolTop = new StringBuilder();
             toolTop.append("<html><b>Name: </b>");
             if (ad instanceof RelationDef) {
                 RelationDef rd = (RelationDef) ad;
-                setIcon(icons.get("OneTable"));
+                if (rd.isArray()) {
+                    setIcon(icons.get("ManyTables"));
+                } else {
+                    setIcon(icons.get("OneTable"));
+                }
                 toolTop.append(rd.getSchema() == null ? "" : rd.getSchema() + ".");
                 toolTop.append(ad.getName());
                 toolTop.append("<br><b>Type: </b>");
@@ -53,9 +57,6 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
                     toolTop.append(fkd.getForeignKeyType().toString());
                     toolTop.append("<br><b>Key map: </b>");
                     toolTop.append(fkd.getPkOnFk().toString());
-                    if (fkd.getForeignKeyType() == ForeignKeyType.ONE_TO_MANY) {
-                        setIcon(icons.get("ManyTables"));
-                    }
                 }
                 if (node.isLeaf()) {
                     setIcon(iconByLeafRelation(rd));
@@ -65,7 +66,7 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
                 toolTop.append(sad.getName());
                 toolTop.append("<br><b>Data type: </b>");
                 toolTop.append(sad.getDataType());
-                setIcon(iconByDataType(sad.getDataType(), false));
+                setIcon(iconByDataType(sad.getDataType(), sad.isArray()));
             }
             setToolTipText(toolTop.toString());
             setText(UIUtils.attributeDefPresentableNameForAdmin(globals, ad));
@@ -75,15 +76,11 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
 
     private Icon iconByLeafRelation(RelationDef rd) {
         AttributeDef childAd = rd;
-        boolean isArray = false;
         while (!(childAd instanceof NuclearAttributeDef)) {
-            if (childAd instanceof ForeignKeyDef
-                    && ((ForeignKeyDef) childAd).getForeignKeyType() == ForeignKeyType.ONE_TO_MANY) {
-                isArray = true;
-            }
             childAd = ((RelationDef) childAd).get(0);
         }
-        return iconByDataType(((NuclearAttributeDef) childAd).getDataType(), isArray);
+        NuclearAttributeDef nad = (NuclearAttributeDef) childAd;
+        return iconByDataType(nad.getDataType(), nad.isArray());
     }
 
     private Icon iconByDataType(Integer dataType, Boolean isArray) {
@@ -124,7 +121,7 @@ public class AttributeDefTreeCellRenderer extends DefaultTreeCellRenderer {
                 break;
         }
         if (isArray) {
-            iconName ="Many"+iconName+"s";
+            iconName = "Many" + iconName + "s";
         }
         return icons.get(iconName);
     }
